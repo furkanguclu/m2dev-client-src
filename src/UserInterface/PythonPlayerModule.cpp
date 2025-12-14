@@ -543,6 +543,31 @@ PyObject * playerGetSkillCoolTime(PyObject* poSelf, PyObject* poArgs)
 	return Py_BuildValue("ff", fCoolTime, fElapsedCoolTime);
 }
 
+#ifdef FIX_REFRESH_SKILL_COOLDOWN
+PyObject * playerResetSkillCoolTimeForSlot(PyObject* poSelf, PyObject* poArgs)
+{
+    int iSlotIndex;
+    if (!PyTuple_GetInteger(poArgs, 0, &iSlotIndex))
+        return Py_BuildException();
+
+    CPythonPlayer::Instance().ResetSkillCoolTimeForSlot(iSlotIndex);
+    return Py_BuildNone();
+}
+
+PyObject* playerResetHorseSkillCoolTime(PyObject* poSelf, PyObject* poArgs)
+{
+    DWORD dwSkillIndex;
+    DWORD dwVisualSlotIndex;
+    
+    if (!PyArg_ParseTuple(poArgs, "ii", &dwSkillIndex, &dwVisualSlotIndex))
+        return Py_BuildException();
+
+    CPythonPlayer::Instance().ResetHorseSkillCoolTime(dwSkillIndex, dwVisualSlotIndex);
+
+    Py_RETURN_NONE;
+}
+#endif
+
 PyObject * playerIsSkillActive(PyObject* poSelf, PyObject* poArgs)
 {
 	int iSlotIndex;
@@ -2233,6 +2258,10 @@ void initPlayer()
 
 		{ "IsSkillCoolTime",			playerIsSkillCoolTime,				METH_VARARGS },
 		{ "GetSkillCoolTime",			playerGetSkillCoolTime,				METH_VARARGS },
+#ifdef FIX_REFRESH_SKILL_COOLDOWN
+		{ "ResetSkillCoolTimeForSlot",	playerResetSkillCoolTimeForSlot,	METH_VARARGS },
+		{ "ResetHorseSkillCoolTime", 	playerResetHorseSkillCoolTime, 		METH_VARARGS },
+#endif
 		{ "IsSkillActive",				playerIsSkillActive,				METH_VARARGS },
 		{ "UseGuildSkill",				playerUseGuildSkill,				METH_VARARGS },
 		{ "AffectIndexToSkillIndex",	playerAffectIndexToSkillIndex,		METH_VARARGS },
