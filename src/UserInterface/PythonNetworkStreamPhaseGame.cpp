@@ -1495,7 +1495,18 @@ bool CPythonNetworkStream::RecvPointChange()
 			case POINT_STAT_RESET_COUNT:
 				__RefreshStatus();
 				break;
+#ifdef CHAR_SELECT_STATS_IMPROVEMENT
+			case POINT_PLAYTIME:
+				m_akSimplePlayerInfo[m_dwSelectedCharacterIndex].dwPlayMinutes = PointChange.value;
+				break;
 			case POINT_LEVEL:
+				m_akSimplePlayerInfo[m_dwSelectedCharacterIndex].byLevel = PointChange.value;
+				__RefreshStatus();
+				__RefreshSkillWindow();
+				break;
+#else
+			case POINT_LEVEL:
+#endif
 			case POINT_ST:
 			case POINT_DX:
 			case POINT_HT:
@@ -2332,16 +2343,19 @@ bool CPythonNetworkStream::RecvSkillCoolTimeEnd()
 bool CPythonNetworkStream::RecvSkillLevel()
 {
 	assert(!"CPythonNetworkStream::RecvSkillLevel - 사용하지 않는 함수");
+
 	TPacketGCSkillLevel packet;
+
 	if (!Recv(sizeof(TPacketGCSkillLevel), &packet))
 	{
 		Tracen("CPythonNetworkStream::RecvSkillLevel - RecvError");
+
 		return false;
 	}
 
 	DWORD dwSlotIndex;
+	CPythonPlayer& rkPlayer = CPythonPlayer::Instance();
 
-	CPythonPlayer& rkPlayer=CPythonPlayer::Instance();
 	for (int i = 0; i < SKILL_MAX_NUM; ++i)
 	{
 		if (rkPlayer.GetSkillSlotIndex(i, &dwSlotIndex))
@@ -2350,7 +2364,9 @@ bool CPythonNetworkStream::RecvSkillLevel()
 
 	__RefreshSkillWindow();
 	__RefreshStatus();
+
 	Tracef(" >> RecvSkillLevel\n");
+
 	return true;
 }
 
@@ -2364,7 +2380,7 @@ bool CPythonNetworkStream::RecvSkillLevelNew()
 		return false;
 	}
 
-	CPythonPlayer& rkPlayer=CPythonPlayer::Instance();
+	CPythonPlayer& rkPlayer = CPythonPlayer::Instance();
 
 	rkPlayer.SetSkill(7, 0);
 	rkPlayer.SetSkill(8, 0);
@@ -2412,6 +2428,7 @@ bool CPythonNetworkStream::RecvDamageInfoPacket()
 
 	return true;
 }
+
 bool CPythonNetworkStream::RecvTargetPacket()
 {
 	TPacketGCTarget TargetPacket;
@@ -2814,6 +2831,26 @@ bool CPythonNetworkStream::RecvMessenger()
 			CPythonMessenger::Instance().SetMobile(char_name, byState);
 			break;
 		}
+
+#ifdef FIX_MESSENGER_ACTION_SYNC
+		case MESSENGER_SUBHEADER_GC_REMOVE_FRIEND:
+		{
+			BYTE bLength;
+
+			if (!Recv(sizeof(bLength), &bLength))
+				return false;
+
+			if (!Recv(bLength, char_name))
+				return false;
+
+			char_name[bLength] = 0;
+
+			CPythonMessenger::Instance().RemoveFriend(char_name);
+			__RefreshTargetBoardByName(char_name);
+
+			break;
+		}
+#endif
 	}
 	return true;
 }
@@ -3984,6 +4021,7 @@ bool CPythonNetworkStream::RecvWalkModePacket()
 bool CPythonNetworkStream::RecvChangeSkillGroupPacket()
 {
 	TPacketGCChangeSkillGroup ChangeSkillGroup;
+
 	if (!Recv(sizeof(ChangeSkillGroup), &ChangeSkillGroup))
 		return false;
 
@@ -3991,6 +4029,7 @@ bool CPythonNetworkStream::RecvChangeSkillGroupPacket()
 
 	CPythonPlayer::Instance().NEW_ClearSkillData();
 	__RefreshCharacterWindow();
+
 	return true;
 }
 

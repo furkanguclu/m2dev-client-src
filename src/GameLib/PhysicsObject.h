@@ -71,7 +71,7 @@ class CPhysicsObject
 
 		void SetDirection(const D3DXVECTOR3 & c_rv3Direction);
 		void IncreaseExternalForce(const D3DXVECTOR3 & c_rvBasePosition, float fForce);
-		void SetLastPosition(const TPixelPosition & c_rPosition, float fBlendingTime);
+		void SetLastPosition(const TPixelPosition& c_rPosition, float fBlendingTime);
 		void GetLastPosition(TPixelPosition * pPosition);
 
 		float GetXMovement();
@@ -92,6 +92,7 @@ class CPhysicsObject
 		D3DXVECTOR3 m_v3Velocity;
 
 		D3DXVECTOR3 m_v3LastPosition;
+
 		CEaseOutInterpolation m_xPushingPosition;
 		CEaseOutInterpolation m_yPushingPosition;
 

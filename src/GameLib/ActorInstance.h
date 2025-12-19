@@ -479,7 +479,6 @@ class CActorInstance : public IActorInstance, public IFlyTargetableObject
 		void		RenderCollisionData();
 		void		RenderToShadowMap();
 
-
 	protected:
 		void		__AdjustCollisionMovement(const CGraphicObjectInstance * c_pGraphicObjectInstance);
 
@@ -497,6 +496,9 @@ class CActorInstance : public IActorInstance, public IFlyTargetableObject
 		float		GetHeight();
 		void		ShowAllAttachingEffect();
 		void		HideAllAttachingEffect();
+#ifdef __ENABLE_STEALTH_FIX__ //EXP
+		void		HideAllAttachingEffectForEunhyeong();
+#endif
 		void		ClearAttachingEffect();
 
 		// Fishing
