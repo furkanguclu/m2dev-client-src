@@ -1556,7 +1556,11 @@ void CInstanceBase::StateProcess()
 						SetAdvancingRotation(fRotDst);
 						SetRotation(fRotDst);
 
+#ifdef FIX_POS_SYNC
+						NEW_UseSkill(1, eFunc& FUNC_SKILL - 1, uArg & 0x0f, (uArg >> 4) ? true : false);
+#else
 						NEW_UseSkill(0, eFunc & 0x7f, uArg&0x0f, (uArg>>4) ? true : false);
+#endif
 						//Tracen("가깝기 때문에 워프 공격");
 					}
 				}
@@ -1734,7 +1738,11 @@ void CInstanceBase::MovementProcess()
 							{
 								SetAdvancingRotation(m_fDstRot);
 								BlendRotation(m_fDstRot);
+#ifdef FIX_POS_SYNC
+								NEW_UseSkill(1, m_kMovAfterFunc.eFunc& FUNC_SKILL - 1, m_kMovAfterFunc.uArg & 0x0f, (m_kMovAfterFunc.uArg >> 4) ? true : false);
+#else
 								NEW_UseSkill(0, m_kMovAfterFunc.eFunc & 0x7f, m_kMovAfterFunc.uArg&0x0f, (m_kMovAfterFunc.uArg>>4) ? true : false);
+#endif
 							}
 							else
 							{
@@ -1978,9 +1986,10 @@ void CInstanceBase::Render()
 
 		if (pkInstEach)
 		{
+			// MR-3: Invisibility fix
 			if (pkInstEach->IsAffect(AFFECT_INVISIBILITY) || pkInstEach->IsAffect(AFFECT_EUNHYEONG) || pkInstEach->IsAffect(AFFECT_REVIVE_INVISIBILITY))
 			{
-				if (CPythonPlayer::Instance().IsMainCharacterIndex(pkInstEach->GetVirtualID()))
+				if (CPythonPlayer::Instance().IsMainCharacterIndex(pkInstEach->GetVirtualID()) && !pkInstEach->IsAffect(AFFECT_INVISIBILITY))
 					continue;
 
 				if (pkInstEach->IsAffect(AFFECT_EUNHYEONG) && !pkInstEach->IsAffect(AFFECT_INVISIBILITY) && !pkInstEach->IsAffect(AFFECT_REVIVE_INVISIBILITY))
@@ -1988,6 +1997,11 @@ void CInstanceBase::Render()
 				else
 					pkInstEach->m_GraphicThingInstance.HideAllAttachingEffect();
 			}
+			else
+			{
+				pkInstEach->m_GraphicThingInstance.ShowAllAttachingEffect();
+			}
+			// MR-3: -- END OF -- Invisibility fix
 		}
 	}
 	
