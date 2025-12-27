@@ -299,6 +299,7 @@ void CGraphicTextInstance::Update()
 			wchar_t ch;
 			DWORD color;
 			int linkIndex; // -1 = none, otherwise index into linkTargets
+			int logicalPos;  // logical index in original wTextBuf (includes tags)
 		};
 
 		auto ReorderTaggedWithBidi = [&](std::vector<TVisChar>& vis, bool forceRTL)
@@ -386,7 +387,7 @@ void CGraphicTextInstance::Update()
 				else
 				{
 					// Regular visible character
-					logicalVis.push_back(TVisChar{ ch, curColor, activeLinkIndex });
+					logicalVis.push_back(TVisChar{ ch, curColor, activeLinkIndex, i });
 				}
 
 				i += 1;
@@ -428,21 +429,6 @@ void CGraphicTextInstance::Update()
 			}
 
 			i += tagLen;
-		}
-
-		// Complete position mappings
-		const int logicalVisSize = (int)logicalVis.size();
-		m_logicalToVisualPos[wTextLen] = logicalVisSize;
-
-		m_visualToLogicalPos.resize((size_t)logicalVisSize + 1);
-		const size_t logicalToVisualSize = m_logicalToVisualPos.size();
-		const int visualToLogicalSize = (int)m_visualToLogicalPos.size();
-
-		for (size_t i = 0; i < logicalToVisualSize; ++i)
-		{
-			const int visualPos = m_logicalToVisualPos[i];
-			if (visualPos >= 0 && visualPos < visualToLogicalSize)
-				m_visualToLogicalPos[visualPos] = (int)i;
 		}
 
 		// ====================================================================
@@ -564,7 +550,7 @@ void CGraphicTextInstance::Update()
 
 				// Write back - handle size changes by erasing/inserting
 				const int originalSize = linkLength;
-				const int newSize = linkVisualSize;
+				const int newSize = (int)linkVisual.size();
 				const int sizeDiff = newSize - originalSize;
 
 				// Replace existing characters (cache min for performance)
@@ -582,6 +568,7 @@ void CGraphicTextInstance::Update()
 				{
 					// Grew - insert new characters
 					TVisChar templateChar = logicalVis[linkStart];
+					templateChar.logicalPos = logicalVis[linkStart].logicalPos;
 					for (int j = originalSize; j < newSize; ++j)
 					{
 						templateChar.ch = linkVisual[j];
@@ -650,6 +637,45 @@ void CGraphicTextInstance::Update()
 					logicalVis.insert(logicalVis.end(), segments[s].begin(), segments[s].end());
 				}
 			}
+		}
+
+		// ====================================================================
+		// FINAL: Rebuild visual<->logical mapping AFTER all BiDi/tag reordering
+		// ====================================================================
+
+		m_visualToLogicalPos.clear();
+		m_logicalToVisualPos.clear();
+
+		// logical positions refer to indices in wTextBuf (tagged string)
+		m_logicalToVisualPos.resize((size_t)wTextLen + 1, -1);
+		m_visualToLogicalPos.resize((size_t)logicalVis.size() + 1, wTextLen);
+
+		// Fill visual->logical from stored glyph origin
+		for (size_t v = 0; v < logicalVis.size(); ++v)
+		{
+			int lp = logicalVis[v].logicalPos;
+			if (lp < 0) lp = 0;
+			if (lp > wTextLen) lp = wTextLen;
+
+			m_visualToLogicalPos[v] = lp;
+
+			// For logical->visual, keep the first visual position that maps to lp
+			if (m_logicalToVisualPos[(size_t)lp] < 0)
+				m_logicalToVisualPos[(size_t)lp] = (int)v;
+		}
+
+		// End positions
+		m_visualToLogicalPos[logicalVis.size()] = wTextLen;
+		m_logicalToVisualPos[(size_t)wTextLen] = (int)logicalVis.size();
+
+		// Fill gaps in logical->visual so cursor movement doesn't break on tag-only regions
+		int last = 0;
+		for (int i = 0; i <= wTextLen; ++i)
+		{
+			if (m_logicalToVisualPos[(size_t)i] < 0)
+				m_logicalToVisualPos[(size_t)i] = last;
+			else
+				last = m_logicalToVisualPos[(size_t)i];
 		}
 
 		// ====================================================================
@@ -1431,10 +1457,6 @@ void CGraphicTextInstance::GetTextSize(int* pRetWidth, int* pRetHeight)
 
 int CGraphicTextInstance::PixelPositionToCharacterPosition(int iPixelPosition)
 {
-	// iPixelPosition is relative to the window
-	// Character positions in m_pCharInfoVector are relative to text start (0,0)
-	// We need to find which character the pixel falls on
-
 	// Clamp to valid range [0, textWidth]
 	int adjustedPixelPos = iPixelPosition;
 	if (adjustedPixelPos < 0)
@@ -1442,14 +1464,23 @@ int CGraphicTextInstance::PixelPositionToCharacterPosition(int iPixelPosition)
 	if (adjustedPixelPos > m_textWidth)
 		adjustedPixelPos = m_textWidth;
 
-	// Find the character at the pixel position
+	// RTL: interpret click from right edge of rendered text
+	if (m_computedRTL)
+		adjustedPixelPos = m_textWidth - adjustedPixelPos;
+
 	int icurPosition = 0;
 	int visualPos = -1;
 
 	for (int i = 0; i < (int)m_pCharInfoVector.size(); ++i)
 	{
 		CGraphicFontTexture::TCharacterInfomation* pCurCharInfo = m_pCharInfoVector[i];
-		icurPosition += pCurCharInfo->width;
+
+		// Use advance instead of width (width is not reliable for cursor hit-testing)
+		int adv = pCurCharInfo->advance;
+		if (adv <= 0)
+			adv = pCurCharInfo->width;
+
+		icurPosition += adv;
 
 		if (adjustedPixelPos < icurPosition)
 		{
@@ -1458,11 +1489,9 @@ int CGraphicTextInstance::PixelPositionToCharacterPosition(int iPixelPosition)
 		}
 	}
 
-	// If not found, use end position
 	if (visualPos < 0)
 		visualPos = (int)m_pCharInfoVector.size();
 
-	// Convert visual position to logical position (accounting for tags)
 	if (!m_visualToLogicalPos.empty() && visualPos >= 0 && visualPos < (int)m_visualToLogicalPos.size())
 		return m_visualToLogicalPos[visualPos];
 
