@@ -2,10 +2,13 @@
 
 #include "Resource.h"
 #include "FileLoaderThread.h"
+#include "FileLoaderThreadPool.h"
 
 #include <set>
 #include <map>
 #include <string>
+
+class CTextureCache;
 
 class CResourceManager : public CSingleton<CResourceManager>
 {
@@ -42,6 +45,9 @@ class CResourceManager : public CSingleton<CResourceManager>
 		void		ProcessBackgroundLoading();
 		void		PushBackgroundLoadingSet(std::set<std::string> & LoadingSet);
 
+		CTextureCache* GetTextureCache() { return m_pTextureCache; }
+		CFileLoaderThreadPool* GetLoaderThreadPool() { return m_pLoaderThreadPool; }
+
 	protected:
 		void		__DestroyDeletingResourceMap();
 		void		__DestroyResourceMap();
@@ -68,6 +74,8 @@ class CResourceManager : public CSingleton<CResourceManager>
 		TResourceRefDecreaseWaitingMap			m_pResRefDecreaseWaitingMap;
 
 		static CFileLoaderThread				ms_loadingThread;
+		CFileLoaderThreadPool*					m_pLoaderThreadPool;
+		CTextureCache*							m_pTextureCache;
 };
 
 extern int g_iLoadingDelayTime;
