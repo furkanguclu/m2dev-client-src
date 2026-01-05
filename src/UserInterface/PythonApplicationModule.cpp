@@ -1073,6 +1073,60 @@ PyObject* appIsRTL(PyObject* poSelf, PyObject* poArgs)
 	return Py_BuildValue("i", IsRTL() ? 1 : 0);
 }
 
+PyObject* appReloadLocaleConfig(PyObject* poSelf, PyObject* poArgs)
+{
+	LoadConfig("config/locale.cfg");
+	return Py_BuildNone();
+}
+
+PyObject* appReloadLocale(PyObject* poSelf, PyObject* poArgs)
+{
+	// Comprehensive locale reload - updates config, reloads data, and forces Python module reload
+
+	TraceError("=== Starting Locale Reload ===");
+
+	LoadConfig("config/locale.cfg");
+	TraceError("LoadConfig complete, new locale path: %s", GetLocalePath());
+
+	if (!LoadLocaleData(GetLocalePath()))
+	{
+		TraceError("LoadLocaleData FAILED for path: %s", GetLocalePath());
+		return Py_BuildValue("i", 0); // Return False on failure
+	}
+	TraceError("LoadLocaleData succeeded");
+
+	PyObject* modulesDict = PyImport_GetModuleDict();
+	TraceError("Got modules dict: %p, is dict: %d", modulesDict, modulesDict ? PyDict_Check(modulesDict) : 0);
+
+	if (modulesDict && PyDict_Check(modulesDict))
+	{
+		// List of locale-related modules to clear from cache
+		const char* modulesToReload[] = {
+			"localeInfo",
+			"localeinfo",
+			"uiScriptLocale",
+			"uiscriptlocale",
+			"serverInfo",
+			"serverinfo",
+			NULL
+		};
+
+		for (int i = 0; modulesToReload[i] != NULL; i++)
+		{
+			PyObject* moduleName = PyString_FromString(modulesToReload[i]);
+			if (PyDict_Contains(modulesDict, moduleName))
+			{
+				TraceError("Removing module from cache: %s", modulesToReload[i]);
+				PyDict_DelItem(modulesDict, moduleName);
+			}
+			Py_DECREF(moduleName);
+		}
+	}
+
+	TraceError("=== Locale Reload Complete ===");
+	return Py_BuildValue("i", 1); // Return True on success
+}
+
 void initapp()
 {
 	static PyMethodDef s_methods[] =
@@ -1201,7 +1255,9 @@ void initapp()
 		{ "OnLogoRender",				appLogoRender,					METH_VARARGS },
 		{ "OnLogoOpen",					appLogoOpen,					METH_VARARGS },
 		{ "OnLogoClose",				appLogoClose,					METH_VARARGS },
-	
+
+		{ "ReloadLocaleConfig",			appReloadLocaleConfig,			METH_VARARGS },
+		{ "ReloadLocale",				appReloadLocale,				METH_VARARGS },
 
 		{ NULL, NULL },
 	};

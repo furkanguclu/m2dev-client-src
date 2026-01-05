@@ -222,7 +222,7 @@ void Tracef(const char* c_szFormat, ...)
 
 void TraceError(const char* c_szFormat, ...)
 {
-#ifndef _DISTRIBUTE 
+//#ifndef _DISTRIBUTE 
     char szBuf[DEBUG_STRING_MAX_LEN + 2];
 
     strncpy_s(szBuf, sizeof(szBuf), "SYSERR: ", _TRUNCATE);
@@ -262,12 +262,12 @@ void TraceError(const char* c_szFormat, ...)
 
     if (isLogFile)
         LogFile(szBuf);
-#endif
+//#endif
 }
 
 void TraceErrorWithoutEnter(const char* c_szFormat, ...)
 {
-#ifndef _DISTRIBUTE 
+//#ifndef _DISTRIBUTE 
 
     char szBuf[DEBUG_STRING_MAX_LEN];
 
@@ -295,7 +295,7 @@ void TraceErrorWithoutEnter(const char* c_szFormat, ...)
 
     if (isLogFile)
         LogFile(szBuf);
-#endif
+//#endif
 }
 
 void LogBoxf(const char* c_szFormat, ...)
@@ -349,7 +349,7 @@ void OpenLogFile(bool bUseLogFIle)
         std::filesystem::create_directory("log");
     }
 
-#ifndef _DISTRIBUTE 
+//#ifndef _DISTRIBUTE 
     _wfreopen(L"log/syserr.txt", L"w", stderr);
 
     if (bUseLogFIle)
@@ -357,7 +357,7 @@ void OpenLogFile(bool bUseLogFIle)
         isLogFile = true;
         CLogFile::Instance().Initialize();
     }
-#endif
+//#endif
 }
 
 void OpenConsoleWindow()
