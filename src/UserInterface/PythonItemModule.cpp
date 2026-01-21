@@ -221,6 +221,40 @@ PyObject * itemGetLimit(PyObject * poSelf, PyObject * poArgs)
 	return Py_BuildValue("ii", ItemLimit.bType, ItemLimit.lValue);
 }
 
+PyObject *itemGetLimitType(PyObject *poSelf, PyObject *poArgs)
+{
+	int iValueIndex;
+	if (!PyTuple_GetInteger(poArgs, 0, &iValueIndex))
+		return Py_BadArgument();
+
+	CItemData * pItemData = CItemManager::Instance().GetSelectedItemDataPointer();
+	if (!pItemData)
+		return Py_BuildException("Not yet select item data");
+
+	CItemData::TItemLimit ItemLimit;
+	if (!pItemData->GetLimit(iValueIndex, &ItemLimit))
+		return Py_BuildException();
+
+	return Py_BuildValue("i", ItemLimit.bType);
+}
+
+PyObject *itemGetLimitValue(PyObject *poSelf, PyObject *poArgs)
+{
+	int iValueIndex;
+	if (!PyTuple_GetInteger(poArgs, 0, &iValueIndex))
+		return Py_BadArgument();
+
+	CItemData* pItemData = CItemManager::Instance().GetSelectedItemDataPointer();
+	if (!pItemData)
+		return Py_BuildException("Not yet select item data");
+
+	CItemData::TItemLimit ItemLimit;
+	if (!pItemData->GetLimit(iValueIndex, &ItemLimit))
+		return Py_BuildException();
+
+	return Py_BuildValue("i", ItemLimit.lValue);
+}
+
 PyObject * itemGetAffect(PyObject * poSelf, PyObject * poArgs)
 {
 	int iValueIndex;
@@ -524,6 +558,8 @@ void initItem()
 		{ "IsWearableFlag",					itemIsWearableFlag,						METH_VARARGS },
 		{ "Is1GoldItem",					itemIs1GoldItem,						METH_VARARGS },
 		{ "GetLimit",						itemGetLimit,							METH_VARARGS },
+		{ "GetLimitType",					itemGetLimitType,						METH_VARARGS },
+		{ "GetLimitValue",					itemGetLimitValue,						METH_VARARGS },
 		{ "GetAffect",						itemGetAffect,							METH_VARARGS },
 		{ "GetValue",						itemGetValue,							METH_VARARGS },
 		{ "GetSocket",						itemGetSocket,							METH_VARARGS },
