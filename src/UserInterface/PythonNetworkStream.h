@@ -494,6 +494,7 @@ class CPythonNetworkStream : public CNetworkStream, public CSingleton<CPythonNet
 
 		// Guild
 		bool RecvGuild();
+		bool RecvMarkUpdate();
 
 		// Party
 		bool RecvPartyInvite();

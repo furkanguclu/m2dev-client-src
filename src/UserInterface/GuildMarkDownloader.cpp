@@ -1,7 +1,9 @@
 #include "StdAfx.h"
 #include "GuildMarkDownloader.h"
 #include "PythonCharacterManager.h"
+#include "PythonTextTail.h"
 #include "Packet.h"
+#include "PackLib/PackManager.h"
 
 // MARK_BUG_FIX
 struct SMarkIndex
@@ -89,6 +91,7 @@ void CGuildMarkDownloader::__Initialize()
 	m_dwRandomKey=0;
 	m_dwTodo=TODO_RECV_NONE;
 	m_kVec_dwGuildID.clear();
+	m_setUpdatedImageIndices.clear();
 }
 
 bool CGuildMarkDownloader::__StateProcess()
@@ -113,7 +116,29 @@ void CGuildMarkDownloader::__OfflineState_Set()
 void CGuildMarkDownloader::__CompleteState_Set()
 {
 	m_eState = STATE_COMPLETE;
-	CPythonCharacterManager::instance().RefreshAllGuildMark();
+
+	// Reload all updated mark images before refreshing guild marks
+	// Must use file load mode since mark images are stored on disk, not in pack
+	CPackManager::instance().SetFileLoadMode();
+
+	for (std::set<DWORD>::iterator it = m_setUpdatedImageIndices.begin(); it != m_setUpdatedImageIndices.end(); ++it)
+	{
+		std::string imagePath;
+		if (CGuildMarkManager::Instance().GetMarkImageFilename(*it, imagePath))
+		{
+			CResource* pResource = CResourceManager::Instance().GetResourcePointer(imagePath.c_str());
+			if (pResource && pResource->IsType(CGraphicImage::Type()))
+			{
+				static_cast<CGraphicImage*>(pResource)->Reload();
+			}
+		}
+	}
+
+	CPackManager::instance().SetPackLoadMode();
+	m_setUpdatedImageIndices.clear();
+
+	// Refresh all mark instances to use the updated textures
+	CPythonTextTail::Instance().RefreshAllGuildMark();
 }
 
 void CGuildMarkDownloader::__LoginState_Set()
@@ -335,7 +360,9 @@ bool CGuildMarkDownloader::__SendMarkCRCList()
 	TPacketCGMarkCRCList kPacketMarkCRCList;
 
 	if (!CGuildMarkManager::Instance().GetBlockCRCList(m_currentRequestingImageIndex, kPacketMarkCRCList.crclist))
+	{
 		__CompleteState_Set();
+	}
 	else
 	{
 		kPacketMarkCRCList.header = HEADER_CG_MARK_CRCLIST;
@@ -387,18 +414,8 @@ bool CGuildMarkDownloader::__LoginState_RecvMarkBlock()
 		// 마크 이미지 저장
 		CGuildMarkManager::Instance().SaveMarkImage(kPacket.imgIdx);
 
-		// 리소스 리로딩 (재접속을 안해도 본인것은 잘 보이게 함)
-		std::string imagePath;
-
-		if (CGuildMarkManager::Instance().GetMarkImageFilename(kPacket.imgIdx, imagePath))
-		{
-			CResource * pResource = CResourceManager::Instance().GetResourcePointer(imagePath.c_str());
-			if (pResource->IsType(CGraphicImage::Type()))
-			{
-				CGraphicImage* pkGrpImg=static_cast<CGraphicImage*>(pResource);
-				pkGrpImg->Reload();
-			}
-		}
+		// Track updated image index for deferred reload
+		m_setUpdatedImageIndices.insert(kPacket.imgIdx);
 	}
 
 	// 더 요청할 것이 있으면 요청하고 아니면 이미지를 저장하고 종료

@@ -9,6 +9,7 @@
 #include "PythonGuild.h"
 #include "Locale.h"
 #include "MarkManager.h"
+#include "PackLib/PackManager.h"
 
 #include <utf8.h>
 // EPlaceDir and TextTailBiDi() template are defined in utf8.h
@@ -916,6 +917,24 @@ void CPythonTextTail::DetachLevel(DWORD dwVID)
 }
 
 
+void CPythonTextTail::RefreshAllGuildMark()
+{
+	CPackManager::instance().SetFileLoadMode();
+
+	for (TTextTailMap::iterator itor = m_CharacterTextTailMap.begin(); itor != m_CharacterTextTailMap.end(); ++itor)
+	{
+		TTextTail* pTextTail = itor->second;
+
+		if (!pTextTail->pMarkInstance)
+			continue;
+
+		// Re-load the mark instance to get the updated texture
+		pTextTail->pMarkInstance->Load();
+	}
+
+	CPackManager::instance().SetPackLoadMode();
+}
+
 void CPythonTextTail::Initialize()
 {
 	// DEFAULT_FONT
@@ -926,7 +945,7 @@ void CPythonTextTail::Initialize()
 	{
 		TraceError("CPythonTextTail::Initialize - CANNOT_FIND_DEFAULT_FONT");
 		return;
-	}	
+	}
 
 	ms_pFont = pkDefaultFont;
 	// END_OF_DEFAULT_FONT

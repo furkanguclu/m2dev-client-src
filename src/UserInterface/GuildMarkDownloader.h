@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include "EterLib/NetStream.h"
 #include "MarkManager.h"
 
@@ -76,4 +78,6 @@ class CGuildMarkDownloader : public CNetworkStream, public CSingleton<CGuildMark
 		DWORD m_dwBlockIndex;
 		DWORD m_dwBlockDataSize;
 		DWORD m_dwBlockDataPos;
+
+		std::set<DWORD> m_setUpdatedImageIndices;
 };

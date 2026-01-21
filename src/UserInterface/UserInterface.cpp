@@ -162,7 +162,7 @@ bool PackInitialize(const char * c_pszFolder)
 		"sound",
 		"sound_m",
 		"sound2",
-		"bgm",
+		// "bgm", // BGM files are loaded directly from disk, not from pack
 		"locale",
 		"uiscript",
 		"ETC",

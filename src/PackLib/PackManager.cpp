@@ -48,29 +48,30 @@ bool CPackManager::GetFileWithPool(std::string_view path, TPackFile& result, CBu
 	thread_local std::string buf;
 	NormalizePath(path, buf);
 
+	// First try to load from pack
 	if (m_load_from_pack) {
 		auto it = m_entries.find(buf);
 		if (it != m_entries.end()) {
 			return it->second.first->GetFileWithPool(it->second.second, result, pPool);
 		}
 	}
-	else {
-		std::ifstream ifs(buf, std::ios::binary);
-		if (ifs.is_open()) {
-			ifs.seekg(0, std::ios::end);
-			size_t size = ifs.tellg();
-			ifs.seekg(0, std::ios::beg);
 
-			if (pPool) {
-				result = pPool->Acquire(size);
-				result.resize(size);
-			} else {
-				result.resize(size);
-			}
+	// Fallback to disk (for files not in packs, like bgm folder)
+	std::ifstream ifs(buf, std::ios::binary);
+	if (ifs.is_open()) {
+		ifs.seekg(0, std::ios::end);
+		size_t size = ifs.tellg();
+		ifs.seekg(0, std::ios::beg);
 
-			if (ifs.read((char*)result.data(), size)) {
-				return true;
-			}
+		if (pPool) {
+			result = pPool->Acquire(size);
+			result.resize(size);
+		} else {
+			result.resize(size);
+		}
+
+		if (ifs.read((char*)result.data(), size)) {
+			return true;
 		}
 	}
 
@@ -82,13 +83,16 @@ bool CPackManager::IsExist(std::string_view path) const
 	thread_local std::string buf;
 	NormalizePath(path, buf);
 
+	// First check in pack entries
 	if (m_load_from_pack) {
 		auto it = m_entries.find(buf);
-		return it != m_entries.end();
+		if (it != m_entries.end()) {
+			return true;
+		}
 	}
-	else {
-		return std::filesystem::exists(buf);
-	}
+
+	// Fallback to disk (for files not in packs, like bgm folder)
+	return std::filesystem::exists(buf);
 }
 
 void CPackManager::NormalizePath(std::string_view in, std::string& out) const

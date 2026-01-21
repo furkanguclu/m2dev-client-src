@@ -74,6 +74,7 @@ class CPythonTextTail : public CSingleton<CPythonTextTail>
 		void SetItemTextTailOwner(DWORD dwVID, const char * c_szName);
 		void DeleteCharacterTextTail(DWORD VirtualID);
 		void DeleteItemTextTail(DWORD VirtualID);
+		void RefreshAllGuildMark();
 
 		int Pick(int ixMouse, int iyMouse);
 		void SelectItemName(DWORD dwVirtualID);

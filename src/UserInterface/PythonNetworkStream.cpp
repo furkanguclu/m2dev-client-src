@@ -121,6 +121,7 @@ class CMainPacketHeaderMap : public CNetworkPacketHeaderMap
 
 			Set(HEADER_GC_MESSENGER,	CNetworkPacketHeaderMap::TPacketType(sizeof(TPacketGCMessenger), DYNAMIC_SIZE_PACKET));
 			Set(HEADER_GC_GUILD,		CNetworkPacketHeaderMap::TPacketType(sizeof(TPacketGCGuild), DYNAMIC_SIZE_PACKET));
+			Set(HEADER_GC_MARK_UPDATE,	CNetworkPacketHeaderMap::TPacketType(sizeof(TPacketGCMarkUpdate), STATIC_SIZE_PACKET));
 
 			Set(HEADER_GC_PARTY_INVITE,	CNetworkPacketHeaderMap::TPacketType(sizeof(TPacketGCPartyInvite), STATIC_SIZE_PACKET));
 			Set(HEADER_GC_PARTY_ADD,	CNetworkPacketHeaderMap::TPacketType(sizeof(TPacketGCPartyAdd), STATIC_SIZE_PACKET));

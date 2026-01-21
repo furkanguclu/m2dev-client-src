@@ -1,6 +1,7 @@
 #include "StdAfx.h"
 #include "PythonNetworkStream.h"
 #include "Packet.h"
+#include "GuildMarkDownloader.h"
 
 #include "PythonGuild.h"
 #include "PythonCharacterManager.h"
@@ -438,6 +439,10 @@ void CPythonNetworkStream::GamePhase()
 
 			case HEADER_GC_GUILD:
 				ret = RecvGuild();
+				break;
+
+			case HEADER_GC_MARK_UPDATE:
+				ret = RecvMarkUpdate();
 				break;
 
 			case HEADER_GC_PARTY_INVITE:
@@ -3926,6 +3931,30 @@ bool CPythonNetworkStream::RecvGuild()
 			break;
 		}
 	}
+
+	return true;
+}
+
+static DWORD gs_dwMarkUpdateRequestTime = 0;
+
+bool CPythonNetworkStream::RecvMarkUpdate()
+{
+	TPacketGCMarkUpdate packet;
+	if (!Recv(sizeof(packet), &packet))
+		return false;
+
+	Tracef(" >> RecvMarkUpdate: guildID=%u, imgIdx=%u\n", packet.guildID, packet.imgIdx);
+
+	// Rate limit mark downloads to prevent connection spam from multiple simultaneous guild uploads
+	// Allow at most one download request per 1 second from server-pushed updates
+	DWORD dwCurrentTime = ELTimer_GetMSec();
+	if (dwCurrentTime < gs_dwMarkUpdateRequestTime)
+		return true;
+
+	gs_dwMarkUpdateRequestTime = dwCurrentTime + 1000; // 1 second cooldown
+
+	CGuildMarkDownloader& rkGuildMarkDownloader = CGuildMarkDownloader::Instance();
+	rkGuildMarkDownloader.Connect(m_kMarkAuth.m_kNetAddr, m_kMarkAuth.m_dwHandle, m_kMarkAuth.m_dwRandomKey);
 
 	return true;
 }
